@@ -96,17 +96,32 @@ function M.setup(claude_code, config)
     desc = 'Set shorter updatetime when Claude Code is open',
   })
 
-  -- When Claude Code closes, restore normal updatetime
+  -- When Claude Code closes, restore normal updatetime and clean up
   vim.api.nvim_create_autocmd('TermClose', {
     group = augroup,
     pattern = '*',
-    callback = function()
-      local buf_name = vim.api.nvim_buf_get_name(0)
-      if buf_name:match('claude%-code$') then
+    callback = function(args)
+      local buf_name = vim.api.nvim_buf_get_name(args.buf)
+      if buf_name:match('claude%-code') then
         vim.o.updatetime = claude_code.claude_code.saved_updatetime
+        -- Clean up instance tracking and close window
+        for instance_id, bufnr in pairs(claude_code.claude_code.instances) do
+          if bufnr == args.buf then
+            claude_code.claude_code.instances[instance_id] = nil
+            break
+          end
+        end
+        -- Close windows and delete buffer after a short delay to allow TermClose to complete
+        vim.schedule(function()
+          local win_ids = vim.fn.win_findbuf(args.buf)
+          for _, win_id in ipairs(win_ids) do
+            pcall(vim.api.nvim_win_close, win_id, true)
+          end
+          pcall(vim.api.nvim_buf_delete, args.buf, { force = true })
+        end)
       end
     end,
-    desc = 'Restore normal updatetime when Claude Code is closed',
+    desc = 'Restore normal updatetime and clean up when Claude Code is closed',
   })
 end
 

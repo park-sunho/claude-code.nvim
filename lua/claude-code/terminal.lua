@@ -394,7 +394,14 @@ function M.toggle(claude_code, config, git)
 
   -- Validate existing buffer
   if bufnr and not is_valid_terminal_buffer(bufnr) then
-    -- Buffer is no longer a valid terminal, reset
+    -- Buffer is no longer a valid terminal, clean up and reset
+    -- Close any windows showing this buffer
+    local win_ids = vim.fn.win_findbuf(bufnr)
+    for _, win_id in ipairs(win_ids) do
+      pcall(vim.api.nvim_win_close, win_id, true)
+    end
+    -- Delete the old buffer to free up the name
+    pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
     claude_code.claude_code.instances[instance_id] = nil
     bufnr = nil
   end
