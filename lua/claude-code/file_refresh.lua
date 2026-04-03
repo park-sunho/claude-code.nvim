@@ -101,6 +101,10 @@ function M.setup(claude_code, config)
     group = augroup,
     pattern = '*',
     callback = function(args)
+      if not args.buf or not vim.api.nvim_buf_is_valid(args.buf) then
+        return
+      end
+
       local buf_name = vim.api.nvim_buf_get_name(args.buf)
       if buf_name:match('claude%-code') then
         vim.o.updatetime = claude_code.claude_code.saved_updatetime
@@ -113,6 +117,10 @@ function M.setup(claude_code, config)
         end
         -- Close windows and delete buffer after a short delay to allow TermClose to complete
         vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(args.buf) then
+            return
+          end
+
           local win_ids = vim.fn.win_findbuf(args.buf)
           for _, win_id in ipairs(win_ids) do
             pcall(vim.api.nvim_win_close, win_id, true)
